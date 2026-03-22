@@ -392,6 +392,7 @@ function AppContent() {
                 /* 📖 APENAS VISUALIZAÇÃO PDF (Tela Cheia) */
                 <div key="full-pdf" style={{position: 'relative', flex: 1, display: 'flex'}}>
                   <embed 
+                    key="embed-full"
                     src={`http://localhost:8000/api/static/${project}/documento.pdf#page=${currentPage}`} 
                     type="application/pdf" 
                     width="100%" 
@@ -420,6 +421,7 @@ function AppContent() {
                 <div key="split-workspace" className="workspace-row" style={{height: '100% '}}>
                   <div className="row-cell" style={{height: '100%', padding: 0, overflow: 'hidden', borderRight: '1px solid var(--glass-border)'}}>
                      <embed 
+                        key="embed-split"
                         src={`http://localhost:8000/api/static/${project}/documento.pdf#page=${currentPage}`} 
                         type="application/pdf" 
                         width="100%" 
