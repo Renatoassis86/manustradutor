@@ -5,7 +5,7 @@ import json
 def create_project_folders(base_path, doc_name):
     # Sanitize name
     safe_name = "".join(c for c in doc_name if c.isalnum() or c in (' ', '_', '-')).strip().replace(' ', '_')
-    project_dir = os.path.join(base_path, "documentos", safe_name)
+    project_dir = os.path.join(base_path, safe_name)
     tex_dir = os.path.join(project_dir, "modulo_tex")
     img_dir = os.path.join(project_dir, "imagens")
     

@@ -21,10 +21,40 @@ GLOSSARY = {
 }
 
 def translate_text(text: str, model_api=None) -> str:
-    # 1. Regra : Dicionário de Termos Globais
-    sorted_terms = sorted(GLOSSARY.keys(), key=len, reverse=True)
-    translated_text = text # Idealmente esta variável receberá o retorno de uma chamada de API (ex: Gemini ou ChatGPT)
+    import os
+    from google import genai
+    from google.genai import types
     
+    # Se houver chave Gemini no .env, usa o modelo para tradução real
+    api_key = os.environ.get("GEMINI_API_KEY")
+    translated_text = text
+    
+    if api_key:
+         try:
+              client = genai.Client(api_key=api_key)
+              prompt = f"""Você é um tradutor acadêmico especialista em Administração. 
+              Traduza o seguinte texto do MESTRADO para o Português do Brasil de forma RIGOROSA.
+              
+              REGRA CRÍTICA: Termos globais consagrados na Administração (ex: supply chain, marketing, framework, background, pipeline, benchmarking, lean, stakeholders) 
+              NÃO devem ser traduzidos diretamente, mas sim mantidos em inglês e explicados brevemente em português entre parênteses.
+              NUNCA deixe partes sem tradução.
+              
+              Texto para traduzir:
+              {text}"""
+              
+              response = client.models.generate_content(
+                   model='gemini-2.5-flash',
+                   contents=prompt
+              )
+              translated_text = response.text
+              return translated_text
+         except Exception as e:
+              # Fallback em caso de erro de API
+              translated_text = text + f"\n\n[Erro na API do Gemini: {str(e)}]"
+              return translated_text
+
+    # Se não houver chave, usa o glossário como fallback (simulação atual)
+    sorted_terms = sorted(GLOSSARY.keys(), key=len, reverse=True)
     for term in sorted_terms:
         # Match case insensitive
         pattern = re.compile(rf'\b{term}\b', re.IGNORECASE)

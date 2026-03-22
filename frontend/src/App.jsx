@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
-import { BookOpen, Upload, FileText, List, CheckCircle, FolderOpen } from 'lucide-react';
+import { BookOpen, Upload, FileText, FolderOpen, Printer, CheckCircle } from 'lucide-react';
 import { supabase } from './supabase';
 
 export default function App() {
@@ -13,6 +13,7 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState(1);
   const [translatedCache, setTranslatedCache] = useState({});
   const [view, setView] = useState('upload'); // 'upload', 'list', 'translate'
+  const [leftViewType, setLeftViewType] = useState('text'); // 'text' | 'pdf'
   const [pastProjects, setPastProjects] = useState([]);
 
   useEffect(() => {
@@ -45,7 +46,6 @@ export default function App() {
       setProject(safeName);
       setSections(response.data.sections);
       
-      // Salvar projeto no Supabase
       const { data: projData, error } = await supabase
          .from('projects')
          .insert({ name: safeName, pdf_name: file.name })
@@ -79,7 +79,6 @@ export default function App() {
         [cacheKey]: translatedText
       }));
 
-      // Salva o bloco no Supabase
       if (projectId) {
          await supabase.from('sections').upsert({
              project_id: projectId,
@@ -132,14 +131,14 @@ export default function App() {
         </div>
         <div className="sidebar-content">
           <div className={`nav-item ${view === 'upload' ? 'active' : ''}`} onClick={() => setView('upload')}>
-            <Upload size={18} /> Upload Novo
+            <Upload size={18} /> Novo Texto
           </div>
           <div className={`nav-item ${view === 'list' ? 'active' : ''}`} onClick={() => { setView('list'); fetchProjects(); }}>
             <FolderOpen size={18} /> Textos Traduzidos
           </div>
           {view === 'translate' && project && (
             <div className={`nav-item active`}>
-              <FileText size={18} /> {project}
+              <FileText size={18} /> {project.substring(0, 15)}...
             </div>
           )}
         </div>
@@ -149,18 +148,22 @@ export default function App() {
         <header className="header">
           <h1>
             {view === 'upload' && "Novo Projeto"}
-            {view === 'list' && "Textos Traduzidos"}
-            {view === 'translate' && `Traduzindo: ${project}`}
+            {view === 'list' && "Coleção de Acervo"}
+            {view === 'translate' && `Dashboard: ${project}`}
           </h1>
-          {view === 'translate' && <button className="btn-primary">Exportar .TEX / PDF</button>}
+          {view === 'translate' && (
+            <button className="btn-primary" onClick={() => window.print()}>
+              <Printer size={16} /> Imprimir / PDF
+            </button>
+          )}
         </header>
 
         {view === 'upload' && (
           <div className="upload-container">
             <div className="upload-area" onClick={() => document.getElementById('file-input').click()}>
               <Upload className="upload-icon" size={48} />
-              <p className="upload-title">Clique para fazer upload do seu PDF acadêmico (Max 100MB)</p>
-              <p className="upload-subtitle">Formatos suportados: .pdf</p>
+              <p className="upload-title">Arraste ou clique para carregar o seu arquivo até 100MB</p>
+              <p className="upload-subtitle">Ideal para artigos científicos e livros de Administração</p>
               <input 
                 id="file-input" 
                 type="file" 
@@ -168,14 +171,14 @@ export default function App() {
                 onChange={handleFileChange} 
                 style={{ display: 'none' }} 
               />
-              {file && <p style={{color: '#6366f1', fontWeight: 600}}>{file.name}</p>}
+              {file && <p style={{color: 'var(--primary)', fontWeight: 600}}>{file.name}</p>}
             </div>
             {file && <button className="btn-primary" style={{marginTop: 20}} onClick={handleUpload} disabled={isLoading}>{isLoading ? "Processando..." : "Iniciar Tradução"}</button>}
           </div>
         )}
 
         {view === 'list' && (
-          <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
+          <div style={{display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto'}}>
             {pastProjects.map(proj => (
               <div key={proj.id} className="content-block" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}} onClick={() => loadPastProject(proj)}>
                 <div>
@@ -203,44 +206,88 @@ export default function App() {
               ))}
             </div>
 
-            <div className="grid-workspace">
-              <div className="panel">
-                <div className="panel-header">Original (Página {currentPage})</div>
-                <div style={{overflowY: 'auto', flex: 1}}>
-                  {currentSection?.text_blocks.map((block, i) => (
-                    <div 
-                      key={i} 
-                      className={`content-block ${translatedCache[`${currentPage}-${i}`] ? 'active' : ''}`}
-                      onClick={() => handleTranslateBlock(
-                        block.map(b => b.text).join(' '), i
-                      )}
-                    >
-                      <p className="text-item">{block.map(b => b.text).join(' ')}</p>
-                    </div>
-                  ))}
-                  {currentSection?.images.map((img, i) => (
-                    <div key={i} className="content-block">
-                        <img src={`http://localhost:8000/api/static/${img}`} alt="Figura" className="image-preview"/>
-                    </div>
-                  ))}
-                </div>
+            <div className="grid-headers">
+              <div className="grid-header-title" style={{display: 'flex', gap: 10, alignItems: 'center'}}>
+                📜 {leftViewType === 'pdf' ? "PDF Original" : "Texto Original"} (Pág {currentPage})
+                <button 
+                  className="page-btn" 
+                  style={{padding: '2px 8px', fontSize: 11}} 
+                  onClick={() => setLeftViewType(leftViewType === 'text' ? 'pdf' : 'text')}
+                >
+                  {leftViewType === 'pdf' ? "Ver Blocos" : "Ver PDF"}
+                </button>
               </div>
+              <div className="grid-header-title">🇧🇷 Tradução Manus-Alizada</div>
+            </div>
 
-              <div className="panel">
-                <div className="panel-header">Tradução</div>
-                <div style={{overflowY: 'auto', flex: 1}}>
-                   {currentSection?.text_blocks.map((block, i) => {
-                     const trad = translatedCache[`${currentPage}-${i}`];
-                     return (
-                       <div key={i} className="content-block">
-                         <p className="text-item" style={{color: trad ? '#f8fafc' : '#94a3b8'}}>
-                           {trad || "Clique no bloco ao lado..."}
-                         </p>
-                       </div>
-                     );
-                   })}
+            <div className="workspace-container">
+              {leftViewType === 'pdf' ? (
+                /* 📖 VISUALIZAÇÃO PDF DO DOCUMENTO ORIGINAL */
+                <div className="workspace-row" style={{height: '100%'}}>
+                  <div className="row-cell" style={{height: '100%', padding: 0, overflow: 'hidden'}}>
+                     <embed 
+                        src={`http://localhost:8000/api/static/${project}.pdf#page=${currentPage}`} 
+                        type="application/pdf" 
+                        width="100%" 
+                        height="100%" 
+                        style={{border: 'none', borderRadius: 12}}
+                     />
+                  </div>
+                  <div className="row-cell" style={{overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12}}>
+                     <button 
+                        className="btn-primary" 
+                        style={{marginBottom: 10, alignSelf: 'center'}}
+                        onClick={() => {
+                           currentSection?.text_blocks.forEach((block, i) => {
+                             const text = block.map(b => b.text).join(' ');
+                             handleTranslateBlock(text, i);
+                           });
+                        }}
+                     >
+                        Traduzir Página Toda
+                     </button>
+                     {currentSection?.text_blocks.map((block, i) => {
+                         const trad = translatedCache[`${currentPage}-${i}`];
+                         return (
+                           <div key={i} className={`translated-block ${trad ? '' : 'placeholder'}`} style={{padding: 16, background: 'rgba(2, 132, 199, 0.04)', borderRadius: 10, border: '1px solid rgba(255, 255, 255, 0.03)'}}>
+                               <p className="text-item" style={{color: trad ? '#f8fafc' : '#94a3b8'}}>
+                                 {trad || "Traduzindo..."}
+                               </p>
+                           </div>
+                         );
+                     })}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                /* 📊 VISUALIZAÇÃO TABULAR POR BLOCOS (VETORIZAÇÃO) */
+                currentSection?.text_blocks.map((block, i) => {
+                  const originalText = block.map(b => b.text).join(' ');
+                  const trad = translatedCache[`${currentPage}-${i}`];
+                  
+                  return (
+                    <div key={i} className="workspace-row">
+                      <div className="row-cell original" onClick={() => handleTranslateBlock(originalText, i)}>
+                        {originalText}
+                      </div>
+                      <div className={`row-cell ${trad ? 'translated' : 'translated placeholder'}`}>
+                        {trad || "Clique no bloco ao lado para traduzir..."}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+
+              {/* Imagens se não estiver no modo PDF */}
+              {leftViewType === 'text' && currentSection?.images.map((img, i) => (
+                <div key={i} className="workspace-row">
+                  <div className="row-cell">
+                    <img src={`http://localhost:8000/api/static/${img}`} alt="Figura extraída" className="image-preview" />
+                  </div>
+                  <div className="row-cell translated placeholder" style={{alignItems: 'center', justifyContent: 'center'}}>
+                    Legenda da Figura traduzida
+                  </div>
+                </div>
+              ))}
             </div>
           </>
         )}
