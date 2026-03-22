@@ -1,0 +1,7 @@
+{
+  "name": "manustradutor",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "cd frontend && npm install && npx vite build --emptyOutDir"
+  }
+}
