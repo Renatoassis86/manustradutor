@@ -316,7 +316,7 @@ function AppContent() {
         </header>
 
         {view === 'upload' && (
-          <div className="upload-container">
+          <div key="upload-view" className="upload-container">
             <div className="upload-area" onClick={() => document.getElementById('file-input').click()}>
               <Upload className="upload-icon" size={48} />
               <p className="upload-title">Arraste ou clique para carregar o seu arquivo até 100MB</p>
@@ -344,7 +344,7 @@ function AppContent() {
         )}
 
         {view === 'list' && (
-          <div style={{display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto'}}>
+          <div key="list-view" style={{display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto'}}>
             {pastProjects?.map(proj => (
               <div key={proj.id} className="content-block" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}} onClick={() => loadPastProject(proj)}>
                 <div>
@@ -359,7 +359,7 @@ function AppContent() {
         )}
 
         {view === 'translate' && (
-          <>
+          <div key="translate-view" style={{display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden'}}>
             <div className="page-selector">
               {sections?.map(s => (
                 <button 
@@ -472,7 +472,7 @@ function AppContent() {
                 );
               })}
             </div>
-          </>
+          </div>
         )}
       </main>
     </div>
