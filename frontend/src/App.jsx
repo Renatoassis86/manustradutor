@@ -64,20 +64,20 @@ function AppContent() {
     loadProjects();
   }, []);
 
-  const loadProjects = async () => {
+  async function loadProjects() {
     try {
       const { data, error } = await supabase.from('projects').select('*').order('created_at', { ascending: false });
       setPastProjects(data || []);
     } catch (e) {
       console.error(e);
     }
-  };
+  }
 
-  const handleFileChange = (e) => {
+  function handleFileChange(e) {
     setFile(e.target.files[0]);
-  };
+  }
 
-  const handleUpload = async () => {
+  async function handleUpload() {
     if (!file) return;
     setIsLoading(true);
     const formData = new FormData();
@@ -112,9 +112,9 @@ function AppContent() {
       setIsLoading(false);
       alert("Erro ao enviar PDF.");
     }
-  };
+  }
 
-  const handleUploadAndSave = async () => {
+  async function handleUploadAndSave() {
     if (!file) return;
     setIsLoading(true);
     const formData = new FormData();
@@ -140,13 +140,13 @@ function AppContent() {
       }
 
       setCurrentPage(1);
-      setView('list'); // Vai para o repositório
+      setView('list'); 
       setIsLoading(false);
     } catch (error) {
        console.error("Error saving", error);
        setIsLoading(false);
     }
-  };
+  }
 
   // Auto-traduzir blocos ao mudar de página se estiver no modo PDF
   useEffect(() => {
@@ -192,7 +192,7 @@ function AppContent() {
     fetchSavedPage();
   }, [currentPage, projectId, isTranslatingUnlocked]);
 
-  const handleTranslateBlock = async (text, index) => {
+  async function handleTranslateBlock(text, index) {
     try {
       const cacheKey = `${currentPage}-${index}`;
       if (translatedCache[cacheKey]) return;
@@ -218,9 +218,9 @@ function AppContent() {
     } catch (error) {
       console.error("Translate error", error);
     }
-  };
+  }
 
-  const handleTranslateImage = async (imgPath) => {
+  async function handleTranslateImage(imgPath) {
     try {
       if (imageCache[imgPath]) return;
       
@@ -236,9 +236,9 @@ function AppContent() {
     } catch (error) {
       console.error("Erro Visão:", error);
     }
-  };
+  }
 
-  const loadPastProject = async (proj) => {
+  async function loadPastProject(proj) {
       setProject(proj.name);
       setProjectId(proj.id);
       setIsLoading(true);
@@ -263,7 +263,7 @@ function AppContent() {
       
       setView('translate');
       setIsLoading(false);
-  };
+  }
 
   const currentSection = sections.find(s => s.page === currentPage);
 
