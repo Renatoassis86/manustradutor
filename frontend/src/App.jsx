@@ -27,7 +27,7 @@ export default function App() {
   const loadProjects = async () => {
     try {
       const { data, error } = await supabase.from('projects').select('*').order('created_at', { ascending: false });
-      if (!error) setPastProjects(data || []);
+      setPastProjects(data || []);
     } catch (e) {
       console.error(e);
     }
@@ -237,7 +237,7 @@ export default function App() {
           <div className={`nav-item ${view === 'upload' ? 'active' : ''}`} onClick={() => setView('upload')}>
             <Upload size={18} /> Novo Texto
           </div>
-          <div className={`nav-item ${view === 'list' ? 'active' : ''}`} onClick={() => { setView('list'); fetchProjects(); }}>
+          <div className={`nav-item ${view === 'list' ? 'active' : ''}`} onClick={() => { setView('list'); loadProjects(); }}>
             <FolderOpen size={18} /> Textos Traduzidos
           </div>
           {view === 'translate' && project && (
@@ -311,7 +311,7 @@ export default function App() {
                 <CheckCircle size={20} style={{color: 'var(--accent)'}} />
               </div>
             ))}
-            {pastProjects.length === 0 && <p style={{color: 'var(--text-muted)'}}>Nenhum texto traduzido até o momento.</p>}
+            {(!pastProjects || pastProjects.length === 0) && <p style={{color: 'var(--text-muted)'}}>Nenhum texto traduzido até o momento.</p>}
           </div>
         )}
 
