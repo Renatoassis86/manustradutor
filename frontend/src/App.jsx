@@ -1,10 +1,50 @@
+import React from 'react';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
 import { BookOpen, Upload, FileText, FolderOpen, Printer, CheckCircle } from 'lucide-react';
 import { supabase } from './supabase';
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary caught an error", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{color: '#fff', padding: 40, textAlign: 'center', background: '#090a0f', height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center'}}>
+          <h2 style={{color: '#ef4444', marginBottom: 12}}>🚨 Erro de Renderização Detectado</h2>
+          <pre style={{background: 'rgba(239, 68, 68, 0.1)', padding: 16, borderRadius: 12, border: '1px solid rgba(239, 68, 68, 0.2)', maxWidth: 600, wordBreak: 'break-all', fontSize: 13, color: '#fca5a5', fontFamily: 'monospace'}}>
+            {this.state.error ? this.state.error.stack || this.state.error.toString() : "Erro desconhecido de tela"}
+          </pre>
+          <button className="btn-primary" style={{marginTop: 20, padding: '10px 20px'}} onClick={() => window.location.reload()}>Recarregar Página</button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppContent />
+    </ErrorBoundary>
+  );
+}
+
+function AppContent() {
   const [file, setFile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [project, setProject] = useState(null);
