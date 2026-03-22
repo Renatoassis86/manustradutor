@@ -74,6 +74,40 @@ export default function App() {
     }
   };
 
+  const handleUploadAndSave = async () => {
+    if (!file) return;
+    setIsLoading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await axios.post('http://localhost:8000/api/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      const safeName = response.data.project;
+      setProject(safeName);
+      setSections(response.data.sections || []);
+      
+      const { data: projData, error } = await supabase
+         .from('projects')
+         .insert({ name: safeName, pdf_name: file.name })
+         .select()
+         .single();
+         
+      if (!error && projData) {
+         setProjectId(projData.id);
+         loadProjects();
+      }
+
+      setCurrentPage(1);
+      setView('list'); // Vai para o repositório
+      setIsLoading(false);
+    } catch (error) {
+       console.error("Error saving", error);
+       setIsLoading(false);
+    }
+  };
+
   // Auto-traduzir blocos ao mudar de página se estiver no modo PDF
   useEffect(() => {
     if (view === 'translate' && isTranslatingUnlocked && currentSection?.text_blocks) {
@@ -253,7 +287,16 @@ export default function App() {
               />
               {file && <p style={{color: 'var(--primary)', fontWeight: 600}}>{file.name}</p>}
             </div>
-            {file && <button className="btn-primary" style={{marginTop: 20}} onClick={handleUpload} disabled={isLoading}>{isLoading ? "Processando..." : "Iniciar Tradução"}</button>}
+            {file && (
+              <div style={{display: 'flex', gap: 12, marginTop: 20}}>
+                <button className="btn-primary" onClick={handleUpload} disabled={isLoading}>
+                  {isLoading ? "Processando..." : "Iniciar Tradução"}
+                </button>
+                <button className="btn-secondary" onClick={handleUploadAndSave} disabled={isLoading}>
+                  Guardar para Depois
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -300,10 +343,38 @@ export default function App() {
               <div className="grid-header-title">🇧🇷 Tradução Manus-Alizada</div>
             </div>
 
-            <div className="workspace-container">
-              {leftViewType === 'pdf' ? (
-                /* 📖 VISUALIZAÇÃO PDF DO DOCUMENTO ORIGINAL */
-                 <div className="workspace-row" style={{height: '100% '}}>
+            <div className="workspace-container" style={{position: 'relative', flex: 1, display: 'flex', flexDirection: 'column'}}>
+              
+              {!isTranslatingUnlocked ? (
+                /* 📖 APENAS VISUALIZAÇÃO PDF (Tela Cheia) */
+                <div style={{position: 'relative', flex: 1, display: 'flex'}}>
+                  <embed 
+                    src={`http://localhost:8000/api/static/${project}/documento.pdf#page=${currentPage}`} 
+                    type="application/pdf" 
+                    width="100%" 
+                    height="100%" 
+                    style={{border: 'none', background: '#090a0f', flex: 1}}
+                  />
+                  
+                  {/* Overlay interativo com pergunta */}
+                  <div style={{
+                    position: 'absolute', top: '20px', right: '20px', 
+                    background: 'rgba(3, 7, 18, 0.85)', backdropFilter: 'blur(12px)',
+                    padding: 24, borderRadius: 16, border: '1px solid var(--glass-border)',
+                    maxWidth: 320, boxShadow: '0 20px 40px rgba(0,0,0,0.5)', zIndex: 10
+                  }}>
+                    <h3 style={{color: '#fff', marginBottom: 8, fontSize: 16, fontWeight: 600}}>Vamos Iniciar a Tradução?</h3>
+                    <p style={{color: 'var(--text-muted)', fontSize: 13, marginBottom: 16}}>
+                      Você está visualizando o documento original. Escolha o motor de IA acima e clique para traduzir esta página no modo split.
+                    </p>
+                    <button className="btn-primary" style={{width: '100%'}} onClick={() => setIsTranslatingUnlocked(true)}>
+                      Traduzir Página agora
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* 📊 VISUALIZAÇÃO SPLIT (Original vs Traduzida) */
+                <div className="workspace-row" style={{height: '100% '}}>
                   <div className="row-cell" style={{height: '100%', padding: 0, overflow: 'hidden', borderRight: '1px solid var(--glass-border)'}}>
                      <embed 
                         src={`http://localhost:8000/api/static/${project}/documento.pdf#page=${currentPage}`} 
@@ -313,18 +384,7 @@ export default function App() {
                         style={{border: 'none'}}
                      />
                   </div>
-                   <div className="row-cell" style={{overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16, padding: '16px 20px', justifyContent: !isTranslatingUnlocked ? 'center' : 'flex-start'}}>
-                      
-                      {!isTranslatingUnlocked ? (
-                        /* Interstitial Prompt para desbloqueio da tradução */
-                        <div style={{textAlign: 'center', background: 'rgba(255,255,255,0.02)', padding: 32, borderRadius: 12, border: '1px solid var(--glass-border)', maxWidth: 400, margin: '0 auto'}}>
-                          <h3 style={{color: '#fff', marginBottom: 8, fontSize: 18}}>Deseja Iniciar a Tradução?</h3>
-                          <p style={{color: 'var(--text-muted)', fontSize: 13, marginBottom: 20}}>O documento original está carregado. Clique no botão para traduzir esta página com {provider}.</p>
-                          <button className="btn-primary" style={{width: '100%'}} onClick={() => setIsTranslatingUnlocked(true)}>
-                            Vamos Começar
-                          </button>
-                        </div>
-                      ) : (
+                   <div className="row-cell" style={{overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16, padding: '16px 20px'}}>
                         <>
                           {currentSection?.text_blocks?.map((block, i) => {
                               const trad = translatedCache[`${currentPage}-${i}`];
@@ -349,26 +409,8 @@ export default function App() {
                             );
                           })}
                         </>
-                      )}
                   </div>
                 </div>
-              ) : (
-                /* 📊 VISUALIZAÇÃO TABULAR POR BLOCOS (VETORIZAÇÃO) */
-                currentSection?.text_blocks?.map((block, i) => {
-                  const originalText = block.map(b => b.text).join(' ');
-                  const trad = translatedCache[`${currentPage}-${i}`];
-                  
-                  return (
-                    <div key={i} className="workspace-row">
-                      <div className="row-cell original" onClick={() => handleTranslateBlock(originalText, i)}>
-                        {originalText}
-                      </div>
-                      <div className={`row-cell ${trad ? 'translated' : 'translated placeholder'}`}>
-                        {trad || "Clique no bloco ao lado para traduzir..."}
-                      </div>
-                    </div>
-                  );
-                })
               )}
 
               {/* Imagens se não estiver no modo PDF */}
