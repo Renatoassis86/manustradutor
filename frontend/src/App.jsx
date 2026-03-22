@@ -278,7 +278,10 @@ function AppContent() {
             <Upload size={18} /> Novo Texto
           </div>
           <div className={`nav-item ${view === 'list' ? 'active' : ''}`} onClick={() => { setView('list'); loadProjects(); }}>
-            <FolderOpen size={18} /> Textos Traduzidos
+            <FolderOpen size={18} /> Textos Originais
+          </div>
+          <div className="nav-item">
+            <CheckCircle size={18} style={{color: '#10b981'}} /> Textos Traduzidos
           </div>
           {view === 'translate' && project && (
             <div className={`nav-item active`}>
@@ -387,7 +390,7 @@ function AppContent() {
               
               {!isTranslatingUnlocked ? (
                 /* 📖 APENAS VISUALIZAÇÃO PDF (Tela Cheia) */
-                <div style={{position: 'relative', flex: 1, display: 'flex'}}>
+                <div key="full-pdf" style={{position: 'relative', flex: 1, display: 'flex'}}>
                   <embed 
                     src={`http://localhost:8000/api/static/${project}/documento.pdf#page=${currentPage}`} 
                     type="application/pdf" 
@@ -414,7 +417,7 @@ function AppContent() {
                 </div>
               ) : (
                 /* 📊 VISUALIZAÇÃO SPLIT (Original vs Traduzida) */
-                <div className="workspace-row" style={{height: '100% '}}>
+                <div key="split-workspace" className="workspace-row" style={{height: '100% '}}>
                   <div className="row-cell" style={{height: '100%', padding: 0, overflow: 'hidden', borderRight: '1px solid var(--glass-border)'}}>
                      <embed 
                         src={`http://localhost:8000/api/static/${project}/documento.pdf#page=${currentPage}`} 
