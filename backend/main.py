@@ -82,12 +82,14 @@ async def load_project(project: str):
 
 @app.post("/api/translate_section")
 async def translate_section(data: dict):
-    # Espera JSON com {"text": "Texto original"}
+    # Espera JSON com {"text": "Texto original", "provider": "gemini" ou "openai"}
     text = data.get("text", "")
+    provider = data.get("provider", "gemini")
+    
     if not text:
          raise HTTPException(status_code=400, detail="Texto não informado.")
          
-    translated = translate_text(text)
+    translated = translate_text(text, provider=provider)
     return {"translated": translated}
 
 @app.post("/api/save_tex")
@@ -116,6 +118,75 @@ async def save_tex(data: dict):
         return {"status": "success", "file": f"modulo_pag_{page}.tex"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao salvar arquivo tex: {str(e)}")
+
+@app.post("/api/translate_image")
+async def translate_image(data: dict):
+    # Espera {"img_path": "imagens/image_p1_1.png", "provider": "gemini"}
+    img_path = data.get("img_path", "")
+    provider = data.get("provider", "gemini")
+    
+    if not img_path:
+        raise HTTPException(status_code=400, detail="Caminho da imagem não informado.")
+        
+    full_path = os.path.join(DOCUMENTS_DIR, img_path)
+    if not os.path.exists(full_path):
+        raise HTTPException(status_code=404, detail="Imagem não encontrada no servidor.")
+        
+    import os
+    from google import genai
+    from PIL import Image
+    
+    # Prompt de Visão
+    prompt = """Você é um tradutor acadêmico. Leia o texto contido nesta imagem, gráfico ou figura.
+    Traduza todo o texto visível para o Português do Brasil com rigor acadêmico.
+    Se for um gráfico, descreva os eixos e as principais informações traduzidas.
+    Apresente a tradução de forma estruturada."""
+    
+    # 1. Usando Gemini (Suporte nativo a multimodal)
+    if provider == "gemini":
+         api_key = os.environ.get("GEMINI_API_KEY")
+         if not api_key:
+              return {"translated": "Chave Gemini não encontrada no servidor."}
+         try:
+              client = genai.Client(api_key=api_key)
+              img = Image.open(full_path)
+              response = client.models.generate_content(
+                  model='gemini-2.5-pro',
+                  contents=[img, prompt]
+              )
+              return {"translated": response.text}
+         except Exception as e:
+              return {"translated": f"[Erro no Gemini Visão: {str(e)}]"}
+              
+    # 2. Usando OpenAI (GPT-4o)
+    elif provider == "openai":
+         import openai
+         import base64
+         api_key = os.environ.get("GPT_API_KEY")
+         if not api_key:
+              return {"translated": "Chave GPT não encontrada no servidor."}
+         try:
+              def encode_image(path):
+                  with open(path, "rb") as image_file:
+                      return base64.b64encode(image_file.read()).decode('utf-8')
+              
+              base64_image = encode_image(full_path)
+              client = openai.OpenAI(api_key=api_key)
+              response = client.chat.completions.create(
+                  model="gpt-4o",
+                  messages=[{
+                      "role": "user",
+                      "content": [
+                          {"type": "text", "text": prompt},
+                          {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+                      ]
+                  }]
+              )
+              return {"translated": response.choices[0].message.content}
+         except Exception as e:
+              return {"translated": f"[Erro no ChatGPT Visão: {str(e)}]"}
+              
+    return {"translated": "Funcionalidade de visão não suportada para este provedor."}
 
 @app.get("/api/download_project/{project}")
 async def download_project(project: str):

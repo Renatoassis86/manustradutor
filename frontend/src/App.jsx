@@ -14,6 +14,8 @@ export default function App() {
   const [translatedCache, setTranslatedCache] = useState({});
   const [view, setView] = useState('upload'); // 'upload', 'list', 'translate'
   const [leftViewType, setLeftViewType] = useState('text'); // 'text' | 'pdf'
+  const [provider, setProvider] = useState('gemini'); // 'gemini' | 'openai'
+  const [imageCache, setImageCache] = useState({}); // Cache para visão
   const [pastProjects, setPastProjects] = useState([]);
 
   useEffect(() => {
@@ -71,7 +73,7 @@ export default function App() {
       const cacheKey = `${currentPage}-${blockIndex}`;
       if (translatedCache[cacheKey]) return;
 
-      const response = await axios.post('http://localhost:8000/api/translate_section', { text });
+      const response = await axios.post('http://localhost:8000/api/translate_section', { text, provider });
       const translatedText = response.data.translated;
 
       setTranslatedCache(prev => ({
@@ -91,6 +93,24 @@ export default function App() {
       }
     } catch (error) {
       console.error("Translate error", error);
+    }
+  };
+
+  const handleTranslateImage = async (imgPath) => {
+    try {
+      if (imageCache[imgPath]) return;
+      
+      const response = await axios.post('http://localhost:8000/api/translate_image', { 
+        img_path: `${project}/${imgPath}`, 
+        provider 
+      });
+      
+      setImageCache(prev => ({
+        ...prev,
+        [imgPath]: response.data.translated
+      }));
+    } catch (error) {
+      console.error("Erro Visão:", error);
     }
   };
 
@@ -152,9 +172,19 @@ export default function App() {
             {view === 'translate' && `Dashboard: ${project}`}
           </h1>
           {view === 'translate' && (
-            <button className="btn-primary" onClick={() => window.print()}>
-              <Printer size={16} /> Imprimir / PDF
-            </button>
+            <div style={{display: 'flex', gap: 12, alignItems: 'center'}}>
+              <select 
+                  value={provider} 
+                  onChange={(e) => setProvider(e.target.value)} 
+                  style={{padding: '8px 12px', border: '1px solid var(--glass-border)', background: 'rgba(3, 4, 8, 0.8)', color: '#fff', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 500}}
+               >
+                  <option value="gemini">Gemini 2.5 Flash ⚡</option>
+                  <option value="openai">ChatGPT GPT-4o 🧠</option>
+               </select>
+              <button className="btn-primary" onClick={() => window.print()}>
+                <Printer size={16} /> Imprimir / PDF
+              </button>
+            </div>
           )}
         </header>
 
@@ -278,16 +308,20 @@ export default function App() {
               )}
 
               {/* Imagens se não estiver no modo PDF */}
-              {leftViewType === 'text' && currentSection?.images.map((img, i) => (
-                <div key={i} className="workspace-row">
-                  <div className="row-cell">
-                    <img src={`http://localhost:8000/api/static/${img}`} alt="Figura extraída" className="image-preview" />
+              {leftViewType === 'text' && currentSection?.images.map((img, i) => {
+                const tradImg = imageCache[img];
+                return (
+                  <div key={i} className="workspace-row">
+                    <div className="row-cell" onClick={() => handleTranslateImage(img)} style={{cursor: 'pointer'}}>
+                      <img src={`http://localhost:8000/api/static/${img}`} alt="Figura extraída" className="image-preview" />
+                      <p style={{fontSize: 11, color: 'var(--accent)', marginTop: 4, textAlign: 'center'}}>👁️ Clique na imagem para ler seu texto com IA</p>
+                    </div>
+                    <div className={`row-cell ${tradImg ? '' : 'translated placeholder'}`} style={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                      {tradImg || "Aguardando leitura de imagem..."}
+                    </div>
                   </div>
-                  <div className="row-cell translated placeholder" style={{alignItems: 'center', justifyContent: 'center'}}>
-                    Legenda da Figura traduzida
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </>
         )}

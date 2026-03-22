@@ -265,3 +265,106 @@ body {
     color: black;
   }
 }
+
+/* --- RESPONSIVIDADE MOBILE --- */
+@media (max-width: 1024px) {
+  .dashboard-container {
+    flex-direction: column;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  .sidebar {
+    width: 100%;
+    height: auto;
+    padding: 12px 16px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    border-right: none;
+    border-bottom: 1px solid var(--glass-border);
+    position: sticky;
+    top: 0;
+    background: rgba(3, 4, 8, 0.95);
+    backdrop-filter: blur(10px);
+    z-index: 1000;
+  }
+
+  .logo {
+    margin-bottom: 0;
+    font-size: 16px;
+  }
+
+  .sidebar-content {
+    display: flex;
+    gap: 8px;
+    margin-top: 0;
+  }
+
+  .nav-item {
+    margin-bottom: 0;
+    padding: 8px 12px;
+    font-size: 13px;
+    border-radius: 8px;
+  }
+
+  .nav-item:hover, .nav-item.active {
+    border-left: none;
+    border-bottom: 2px solid var(--primary);
+  }
+
+  .main-workspace {
+    padding: 16px;
+    height: auto;
+    flex: 1;
+    overflow-y: visible;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+    height: auto;
+  }
+
+  .header h1 {
+    font-size: 18px;
+    word-break: break-all;
+  }
+
+  /* Seletor de IA e botões devem ficar visíveis */
+  .header > div {
+    display: flex !important;
+    width: 100%;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .grid-headers {
+    display: none; 
+  }
+
+  .workspace-row {
+    grid-template-columns: 1fr !important; /* Forçar empilhamento real */
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .workspace-row[style*="height: 100%"] { 
+    height: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .row-cell {
+    padding: 14px;
+    font-size: 14px;
+    width: 100%;
+  }
+
+  .workspace-row[style*="height: 100%"] .row-cell {
+    height: 380px !important;
+  }
+}
