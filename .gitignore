@@ -1,0 +1,26 @@
+# .gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+.env
+
+# Node.js
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Project data
+backend/documentos/*
+!backend/documentos/.gitkeep
+
+# Logs and OS files
+*.log
+.DS_Store
+Thumbs.db
