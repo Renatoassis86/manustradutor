@@ -140,7 +140,9 @@ async def translate_image(data: dict):
     prompt = """Você é um tradutor acadêmico. Leia o texto contido nesta imagem, gráfico ou figura.
     Traduza todo o texto visível para o Português do Brasil com rigor acadêmico.
     Se for um gráfico, descreva os eixos e as principais informações traduzidas.
-    Apresente a tradução de forma estruturada."""
+    
+    REGRA DE FORMATAÇÃO: Inicie sua resposta com o título "Tradução do objeto: [Tipo de Objeto - ex: Figura, Tabela, Gráfico]"
+    Apresente a tradução de forma estruturada embaixo desse título."""
     
     # 1. Usando Gemini (Suporte nativo a multimodal)
     if provider == "gemini":

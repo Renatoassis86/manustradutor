@@ -13,7 +13,7 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState(1);
   const [translatedCache, setTranslatedCache] = useState({});
   const [view, setView] = useState('upload'); // 'upload', 'list', 'translate'
-  const [leftViewType, setLeftViewType] = useState('text'); // 'text' | 'pdf'
+  const [leftViewType, setLeftViewType] = useState('pdf'); // 'pdf' | 'text'
   const [provider, setProvider] = useState('gemini'); // 'gemini' | 'openai'
   const [imageCache, setImageCache] = useState({}); // Cache para visão
   const [pastProjects, setPastProjects] = useState([]);
