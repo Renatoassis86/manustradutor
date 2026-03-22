@@ -59,6 +59,7 @@ function AppContent() {
   const [pastProjects, setPastProjects] = useState([]);
 
   const [isTranslatingUnlocked, setIsTranslatingUnlocked] = useState(false); // Pergunta sobre iniciar tradução
+  const currentSection = sections.find(s => s.page === currentPage);
 
   useEffect(() => {
     loadProjects();
@@ -265,7 +266,6 @@ function AppContent() {
       setIsLoading(false);
   }
 
-  const currentSection = sections.find(s => s.page === currentPage);
 
   return (
     <div className="dashboard-container">
