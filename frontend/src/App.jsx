@@ -111,13 +111,12 @@ export default function App() {
       });
       setTranslatedCache(cache);
       
-      // Recarregar os metadados do arquivo se existirem localmente
       try {
-         const response = await axios.post('http://localhost:8000/api/upload', null, { 
-             params: { reload_only: true, project: proj.name }
-         }); 
-         // Mockar recarregamento se necessário
-      } catch (err) {}
+         const response = await axios.get(`http://localhost:8000/api/load_project/${proj.name}`);
+         setSections(response.data.sections);
+      } catch (err) {
+         console.error("Erro ao carregar estrutura original do projeto", err);
+      }
       
       setView('translate');
       setIsLoading(false);

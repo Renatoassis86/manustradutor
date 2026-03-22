@@ -50,6 +50,10 @@ async def upload_document(file: UploadFile = File(...)):
         if "error" in extraction_result:
              raise HTTPException(status_code=500, detail=extraction_result["error"])
              
+        import json
+        with open(os.path.join(extraction_result["project_dir"], "structure.json"), "w", encoding="utf-8") as f:
+            json.dump(extraction_result["sections"], f, ensure_ascii=False)
+             
         return {
             "status": "success",
             "message": "Upload e extração concluídos com sucesso.",
@@ -60,6 +64,21 @@ async def upload_document(file: UploadFile = File(...)):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro no processamento: {str(e)}")
+
+@app.get("/api/load_project/{project}")
+async def load_project(project: str):
+    # Sanitizar nome
+    safe_name = "".join(c for c in project if c.isalnum() or c in (' ', '_', '-')).strip().replace(' ', '_')
+    structure_path = os.path.join(DOCUMENTS_DIR, safe_name, "structure.json")
+    
+    if not os.path.exists(structure_path):
+        raise HTTPException(status_code=404, detail="Estrutura do projeto não encontrada localmente.")
+        
+    import json
+    with open(structure_path, "r", encoding="utf-8") as f:
+        sections = json.load(f)
+        
+    return {"sections": sections}
 
 @app.post("/api/translate_section")
 async def translate_section(data: dict):
