@@ -326,7 +326,7 @@ export default function App() {
                         </div>
                       ) : (
                         <>
-                          {currentSection?.text_blocks.map((block, i) => {
+                          {currentSection?.text_blocks?.map((block, i) => {
                               const trad = translatedCache[`${currentPage}-${i}`];
                               return (
                                 <div key={i} className={`translated-block ${trad ? '' : 'placeholder'}`} style={{padding: 16, background: 'rgba(255, 255, 255, 0.02)', borderRadius: 10, border: '1px solid rgba(255, 255, 255, 0.04)'}}>
@@ -354,7 +354,7 @@ export default function App() {
                 </div>
               ) : (
                 /* 📊 VISUALIZAÇÃO TABULAR POR BLOCOS (VETORIZAÇÃO) */
-                currentSection?.text_blocks.map((block, i) => {
+                currentSection?.text_blocks?.map((block, i) => {
                   const originalText = block.map(b => b.text).join(' ');
                   const trad = translatedCache[`${currentPage}-${i}`];
                   
@@ -372,7 +372,7 @@ export default function App() {
               )}
 
               {/* Imagens se não estiver no modo PDF */}
-              {leftViewType === 'text' && currentSection?.images.map((img, i) => {
+              {leftViewType === 'text' && currentSection?.images?.map((img, i) => {
                 const tradImg = imageCache[img];
                 return (
                   <div key={i} className="workspace-row">
