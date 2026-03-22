@@ -18,16 +18,19 @@ export default function App() {
   const [imageCache, setImageCache] = useState({}); // Cache para visão
   const [pastProjects, setPastProjects] = useState([]);
 
+  const [isTranslatingUnlocked, setIsTranslatingUnlocked] = useState(false); // Pergunta sobre iniciar tradução
+
   useEffect(() => {
-    fetchProjects();
+    loadProjects();
   }, []);
 
-  const fetchProjects = async () => {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (!error) setPastProjects(data);
+  const loadProjects = async () => {
+    try {
+      const { data, error } = await supabase.from('projects').select('*').order('created_at', { ascending: false });
+      if (!error) setPastProjects(data || []);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleFileChange = (e) => {
@@ -46,7 +49,7 @@ export default function App() {
       });
       const safeName = response.data.project;
       setProject(safeName);
-      setSections(response.data.sections);
+      setSections(response.data.sections || []);
       
       const { data: projData, error } = await supabase
          .from('projects')
@@ -56,9 +59,12 @@ export default function App() {
          
       if (!error && projData) {
          setProjectId(projData.id);
-         fetchProjects();
+         loadProjects();
       }
 
+      setCurrentPage(1);
+      setIsTranslatingUnlocked(false); 
+      setLeftViewType('pdf');
       setView('translate');
       setIsLoading(false);
     } catch (error) {
@@ -68,9 +74,53 @@ export default function App() {
     }
   };
 
-  const handleTranslateBlock = async (text, blockIndex) => {
+  // Auto-traduzir blocos ao mudar de página se estiver no modo PDF
+  useEffect(() => {
+    if (view === 'translate' && isTranslatingUnlocked && currentSection?.text_blocks) {
+      currentSection.text_blocks.forEach((block, i) => {
+        const text = block.map(b => b.text).join(' ');
+        if (!translatedCache[`${currentPage}-${i}`]) {
+          handleTranslateBlock(text, i);
+        }
+      });
+      // Ler imagens também se houver
+      currentSection.images?.forEach(img => {
+        if (!imageCache[img]) {
+          handleTranslateImage(img);
+        }
+      });
+    }
+  }, [currentPage, currentSection, view, isTranslatingUnlocked]);
+
+  // Buscar traduções salvas no Supabase para economizar API
+  useEffect(() => {
+    const fetchSavedPage = async () => {
+      if (!projectId || !isTranslatingUnlocked) return;
+      try {
+        const { data } = await supabase.from('sections')
+          .select('*')
+          .eq('project_id', projectId)
+          .eq('page_number', currentPage);
+        
+        if (data && data.length > 0) {
+          setTranslatedCache(prev => {
+            const next = { ...prev };
+            data.forEach(sec => {
+              next[`${sec.page_number}-${sec.block_index}`] = sec.translated_text;
+            });
+            return next;
+          });
+        }
+      } catch (err) {
+        console.error("Erro ao buscar cache do Supabase", err);
+      }
+    };
+    fetchSavedPage();
+  }, [currentPage, projectId, isTranslatingUnlocked]);
+
+  const handleTranslateBlock = async (text, index) => {
     try {
-      const cacheKey = `${currentPage}-${blockIndex}`;
+      const cacheKey = `${currentPage}-${index}`;
       if (translatedCache[cacheKey]) return;
 
       const response = await axios.post('http://localhost:8000/api/translate_section', { text, provider });
@@ -85,7 +135,7 @@ export default function App() {
          await supabase.from('sections').upsert({
              project_id: projectId,
              page_number: currentPage,
-             block_index: blockIndex,
+             block_index: index,
              original_text: text,
              translated_text: translatedText,
              is_approved: true
@@ -209,7 +259,7 @@ export default function App() {
 
         {view === 'list' && (
           <div style={{display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto'}}>
-            {pastProjects.map(proj => (
+            {pastProjects?.map(proj => (
               <div key={proj.id} className="content-block" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}} onClick={() => loadPastProject(proj)}>
                 <div>
                   <h3 style={{margin: '0 0 4px 0', fontSize: 16}}>{proj.name}</h3>
@@ -225,7 +275,7 @@ export default function App() {
         {view === 'translate' && (
           <>
             <div className="page-selector">
-              {sections.map(s => (
+              {sections?.map(s => (
                 <button 
                   key={s.page} 
                   className={`page-btn ${s.page === currentPage ? 'active' : ''}`}
@@ -253,39 +303,53 @@ export default function App() {
             <div className="workspace-container">
               {leftViewType === 'pdf' ? (
                 /* 📖 VISUALIZAÇÃO PDF DO DOCUMENTO ORIGINAL */
-                <div className="workspace-row" style={{height: '100%'}}>
-                  <div className="row-cell" style={{height: '100%', padding: 0, overflow: 'hidden'}}>
+                 <div className="workspace-row" style={{height: '100% '}}>
+                  <div className="row-cell" style={{height: '100%', padding: 0, overflow: 'hidden', borderRight: '1px solid var(--glass-border)'}}>
                      <embed 
-                        src={`http://localhost:8000/api/static/${project}.pdf#page=${currentPage}`} 
+                        src={`http://localhost:8000/api/static/${project}/documento.pdf#page=${currentPage}`} 
                         type="application/pdf" 
                         width="100%" 
                         height="100%" 
-                        style={{border: 'none', borderRadius: 12}}
+                        style={{border: 'none'}}
                      />
                   </div>
-                  <div className="row-cell" style={{overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12}}>
-                     <button 
-                        className="btn-primary" 
-                        style={{marginBottom: 10, alignSelf: 'center'}}
-                        onClick={() => {
-                           currentSection?.text_blocks.forEach((block, i) => {
-                             const text = block.map(b => b.text).join(' ');
-                             handleTranslateBlock(text, i);
-                           });
-                        }}
-                     >
-                        Traduzir Página Toda
-                     </button>
-                     {currentSection?.text_blocks.map((block, i) => {
-                         const trad = translatedCache[`${currentPage}-${i}`];
-                         return (
-                           <div key={i} className={`translated-block ${trad ? '' : 'placeholder'}`} style={{padding: 16, background: 'rgba(2, 132, 199, 0.04)', borderRadius: 10, border: '1px solid rgba(255, 255, 255, 0.03)'}}>
-                               <p className="text-item" style={{color: trad ? '#f8fafc' : '#94a3b8'}}>
-                                 {trad || "Traduzindo..."}
-                               </p>
-                           </div>
-                         );
-                     })}
+                   <div className="row-cell" style={{overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16, padding: '16px 20px', justifyContent: !isTranslatingUnlocked ? 'center' : 'flex-start'}}>
+                      
+                      {!isTranslatingUnlocked ? (
+                        /* Interstitial Prompt para desbloqueio da tradução */
+                        <div style={{textAlign: 'center', background: 'rgba(255,255,255,0.02)', padding: 32, borderRadius: 12, border: '1px solid var(--glass-border)', maxWidth: 400, margin: '0 auto'}}>
+                          <h3 style={{color: '#fff', marginBottom: 8, fontSize: 18}}>Deseja Iniciar a Tradução?</h3>
+                          <p style={{color: 'var(--text-muted)', fontSize: 13, marginBottom: 20}}>O documento original está carregado. Clique no botão para traduzir esta página com {provider}.</p>
+                          <button className="btn-primary" style={{width: '100%'}} onClick={() => setIsTranslatingUnlocked(true)}>
+                            Vamos Começar
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          {currentSection?.text_blocks.map((block, i) => {
+                              const trad = translatedCache[`${currentPage}-${i}`];
+                              return (
+                                <div key={i} className={`translated-block ${trad ? '' : 'placeholder'}`} style={{padding: 16, background: 'rgba(255, 255, 255, 0.02)', borderRadius: 10, border: '1px solid rgba(255, 255, 255, 0.04)'}}>
+                                    <p className="text-item" style={{color: trad ? '#f8fafc' : '#94a3b8', lineHeight: 1.6}}>
+                                      {trad || "Traduzindo conteúdo automaticamente..."}
+                                    </p>
+                                </div>
+                              );
+                          })}
+
+                          {currentSection?.images?.map((img, i) => {
+                            const tradImg = imageCache[img];
+                            return (
+                              <div key={`img-${i}`} className="translated-block" style={{padding: 16, background: 'rgba(255, 255, 255, 0.02)', borderRadius: 10, border: '1px solid rgba(255, 255, 255, 0.04)'}}>
+                                <img src={`http://localhost:8000/api/static/${project}/${img}`} alt="Figura" className="image-preview" style={{width: '100%', borderRadius: 8}} />
+                                <div className="text-item" style={{marginTop: 12, color: '#f1f5f9', fontStyle: 'italic', background: 'rgba(2, 132, 199, 0.1)', padding: 12, borderRadius: 6}}>
+                                  {tradImg || "👁️ Lendo conteúdo e texto da figura..."}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </>
+                      )}
                   </div>
                 </div>
               ) : (
